@@ -15,8 +15,7 @@ class BaseActor(object):
         :return: An action to choose from the given environment.
         
         """
-        action = env.action_space_sample()
-        print(f"{self.name} performed {action}")
+        action = env.action_space.sample()
         return action
 
     def get_reward(self, observation, reward, done, info):
@@ -28,7 +27,6 @@ class BaseActor(object):
         :param info: Additional information.
 
         """
-        print(f"New state, {observation}")
 
     def mutate(self, other):
         """ Returns an offspring that is a mutation between self and an other actor.
@@ -37,4 +35,4 @@ class BaseActor(object):
         :return: A separate, new actor. 
 
         """
-        return self.copy()
+        return BaseActor()

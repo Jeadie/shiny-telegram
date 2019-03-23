@@ -1,5 +1,6 @@
 import gym
-env = gym.make('Pendulum-v0')
+from actor import BaseActor
+
 
 def run_episode(env, actor, episode_steps: int, show=True):
     """ Runs a single episode of the environment for a set number of steps,
@@ -20,14 +21,14 @@ def run_episode(env, actor, episode_steps: int, show=True):
             env.render()
     
         # Get action from actor, given observation
-        action = actor.choose_action(observation) #)env.action_space.sample()
+        action = actor.choose_action(env, observation) #)env.action_space.sample()
 
         # get reward and new environment state from env
         observation, reward, done, info = env.step(action)
         rewards.append(reward)
 
         # Feed reward and new state to actor.
-        actor.add_observation(observation, reward, done, info)
+        actor.get_reward(observation, reward, done, info)
         
         # If episode is done, finish
         if done:
@@ -45,9 +46,17 @@ def get_best_actors(actors, rewards):
                 maximum, some sort of cumulative maximum function).
 
     """
+    # Sum the rewards 
     sum_rewards = [sum(actor_rewards) for actor_rewards in rewards]
-    sum_rewards.sort(reverse=True)
-    return [actors[i] for i in sum_rewards[0:2]]
+    
+    # Pair rewards with actor
+    actor_reward = list(zip(sum_rewards, actors))
+
+    # Sort by score
+    actor_reward = sorted(actor_reward, key=lambda x: x[0], reverse=True)
+
+    # Take 2 best actors
+    return [actor[-1] for actor in actor_reward[0:2]]
 
 
 def mutate_actors(actors, no_offspring):
@@ -58,7 +67,8 @@ def mutate_actors(actors, no_offspring):
 
     :return: A list of no_offspring actors mutated from actors. 
     """
-    return no_offspring * actors
+    actor_1, actor_2 = actors
+    return [actor_1.mutate(actor_2) for i in range(no_offspring)]
 
 
 def run_experiment(actor_fn, env_fn, num_actors, no_generation, no_episode, ep_duration): 
@@ -79,7 +89,7 @@ def run_experiment(actor_fn, env_fn, num_actors, no_generation, no_episode, ep_d
     env = env_fn()
     env.reset()
 
-    for g in no_generations:
+    for g in range(no_generation):
         actor_rewards = []
         for actor in actors:
             generation_reward = []
@@ -91,14 +101,25 @@ def run_experiment(actor_fn, env_fn, num_actors, no_generation, no_episode, ep_d
 
         # Find best actors, 
         winner_actors = get_best_actors(actors, actor_rewards)
-
         # mutate generations
         offspring = mutate_actors(winner_actors, num_actors-2)
         actors = offspring
         actors.extend(winner_actors)
         
     env.reset()
+    return get_best_actors(actors, actor_rewards)
 
+def main():
+    actor_fn = lambda: BaseActor()
+    env_fn = lambda: gym.make("Pendulum-v0")
+    actors = 3
+    generations = 3
+    episodes = 5
+    ep_duration = 10
 
+    winner = run_experiment(actor_fn, env_fn, actors, generations, episodes, ep_duration)
+    
 
+if __name__ == '__main__':
+    main()
 
