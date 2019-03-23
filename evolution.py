@@ -1,21 +1,6 @@
 import gym
 env = gym.make('Pendulum-v0')
 
-
-for i_episode in range(2):
-    observation = env.reset()
-    for t in range(10):
-        env.render()
-        print("Observation", observation)
-        action = env.action_space.sample()
-        print("Action", action)
-        observation, reward, done, info = env.step(action)
-        print("Reward", reward)
-        if done:
-            print("Episode finished after {} timesteps".format(t+1))
-            break
-env.close()
-
 def run_episode(env, actor, episode_steps: int, show=True):
     """ Runs a single episode of the environment for a set number of steps,
         unless the episode has finished prior.
@@ -111,7 +96,8 @@ def run_experiment(actor_fn, env_fn, num_actors, no_generation, no_episode, ep_d
         offspring = mutate_actors(winner_actors, num_actors-2)
         actors = offspring
         actors.extend(winner_actors)
-
+        
+    env.reset()
 
 
 
