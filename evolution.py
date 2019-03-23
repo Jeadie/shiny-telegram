@@ -1,5 +1,5 @@
 import gym
-from actor import BaseActor
+from actor import PendulumDNNActor
 
 
 def run_episode(env, actor, episode_steps: int, show=True):
@@ -26,7 +26,7 @@ def run_episode(env, actor, episode_steps: int, show=True):
         # get reward and new environment state from env
         observation, reward, done, info = env.step(action)
         rewards.append(reward)
-
+        
         # Feed reward and new state to actor.
         actor.get_reward(observation, reward, done, info)
         
@@ -48,7 +48,8 @@ def get_best_actors(actors, rewards):
     """
     # Sum the rewards 
     sum_rewards = [sum(actor_rewards) for actor_rewards in rewards]
-    
+    print(f"Max reward: {max(sum_rewards)}.")
+    print(f"Average reward: {sum(sum_rewards)/len(sum_rewards)}.")
     # Pair rewards with actor
     actor_reward = list(zip(sum_rewards, actors))
 
@@ -90,10 +91,13 @@ def run_experiment(actor_fn, env_fn, num_actors, no_generation, no_episode, ep_d
     env.reset()
 
     for g in range(no_generation):
+        print(f"Starting generation: {g}.")
         actor_rewards = []
         for actor in actors:
+            print(f"  Starting actor: {actor.name}.")
             generation_reward = []
             for ep in range(no_episode):
+                print(f"    Starting episode: {ep}.")
                 episode_reward = run_episode(env, actor, ep_duration, show=False)                
                 generation_reward.extend(episode_reward)
 
@@ -110,7 +114,7 @@ def run_experiment(actor_fn, env_fn, num_actors, no_generation, no_episode, ep_d
     return get_best_actors(actors, actor_rewards)
 
 def main():
-    actor_fn = lambda: BaseActor()
+    actor_fn = lambda: PendulumDNNActor()
     env_fn = lambda: gym.make("Pendulum-v0")
     actors = 3
     generations = 3
