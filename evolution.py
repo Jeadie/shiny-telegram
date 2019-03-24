@@ -1,5 +1,7 @@
 import gym
+
 from actor import PendulumDNNActor
+import utils
 
 
 def run_episode(env, actor, episode_steps: int, show=True):
@@ -48,8 +50,7 @@ def get_best_actors(actors, rewards):
     """
     # Sum the rewards 
     sum_rewards = [sum(actor_rewards) for actor_rewards in rewards]
-    print(f"Max reward: {max(sum_rewards)}.")
-    print(f"Average reward: {sum(sum_rewards)/len(sum_rewards)}.")
+    print(f"{max(sum_rewards)}, {sum(sum_rewards)/len(sum_rewards)}")
     # Pair rewards with actor
     actor_reward = list(zip(sum_rewards, actors))
 
@@ -72,7 +73,7 @@ def mutate_actors(actors, no_offspring):
     return [actor_1.mutate(actor_2) for i in range(no_offspring)]
 
 
-def run_experiment(actor_fn, env_fn, num_actors, no_generation, no_episode, ep_duration): 
+def run_experiment(actor_fn, env_fn, num_actors, no_generation, no_episode, ep_duration, writer=None): 
     """ Runs a neuroevolution experiment. 
 
         :param actor_fn: 
@@ -91,13 +92,10 @@ def run_experiment(actor_fn, env_fn, num_actors, no_generation, no_episode, ep_d
     env.reset()
 
     for g in range(no_generation):
-        print(f"Starting generation: {g}.")
         actor_rewards = []
         for actor in actors:
-            print(f"  Starting actor: {actor.name}.")
             generation_reward = []
             for ep in range(no_episode):
-                print(f"    Starting episode: {ep}.")
                 episode_reward = run_episode(env, actor, ep_duration, show=False)                
                 generation_reward.extend(episode_reward)
 
@@ -113,17 +111,16 @@ def run_experiment(actor_fn, env_fn, num_actors, no_generation, no_episode, ep_d
     env.reset()
     return get_best_actors(actors, actor_rewards)
 
-def main():
+def main(args):
+    writer = tf.summary.FileWriter(args.logdir)
+
     actor_fn = lambda: PendulumDNNActor()
     env_fn = lambda: gym.make("Pendulum-v0")
-    actors = 3
-    generations = 3
+    actors = 5
+    generations = 100
     episodes = 5
     ep_duration = 10
 
-    winner = run_experiment(actor_fn, env_fn, actors, generations, episodes, ep_duration)
+    winner = run_experiment(actor_fn, env_fn, actors, generations, episodes, ep_duration, writer=writer)
     
-
-if __name__ == '__main__':
-    main()
 

@@ -47,7 +47,7 @@ class PendulumDNNActor(BaseActor):
 
     def __init__(self, model=None):
         self.name = "Pendulum DNN Actor"
-        self.e = 0.001        
+        self.e = 0.00005        
         if model:
             self.model = model
         else:
