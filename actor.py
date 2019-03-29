@@ -79,7 +79,18 @@ class PendulumDNNActor(BaseActor):
         a = self.model.predict(np.array([observation]))
         return a[0]
 
-    def mutate_weights(self, w1, w2):
+    def split_mutate(self, w1, w2):
+        random.randint(0, w1
+        neurons = [len(w[i] for i in range(1, len(w1)-1, 2)]
+        split = random.randint(0, sum(neurons))
+        split_mask_flat = np.array([i > split for in range(sum(neurons))])
+        
+        options = [w1, w2]
+        random.shuffle(options)
+        split_mask = np.cumsum(a) # list of len of 
+
+    
+    def random_mutate(self, w1, w2):
         """ Mutates the weights of two, same shaped, model weights. 
 
         """
@@ -115,6 +126,15 @@ class PendulumDNNActor(BaseActor):
         weights.append(random_w()[-1] + self.e*np.random.rand(1))
         return weights
 
+
+    def mutate_weights(self, w1, w2): 
+        w = random.choice([w1, w2])
+        m = []
+        for i in range(len(w)):
+          layer = w[i].shape
+          m.append(w[i] + np.random.random(w[i].shape) * self.e)
+
+        return m
 
     def mutate(self, other):
         """ Returns an offspring that is a mutation between self and an other actor.
