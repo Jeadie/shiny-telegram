@@ -1,6 +1,24 @@
 # shiny-telegram
 Some fun in OpenAI Gym using NeuroEvolution &amp; other RL
 
+## Usage
+To train an exisiting actor in a compatible environment: 
+```bash
+python -m initialiser \
+  --env="Pendulum-v0" \
+  --logdir=".//" \
+  --actors=200 \
+  --generations=200 \
+  --episodes=10 \
+  --duration=20 \
+  --actor-type="PendulumDNNActor" \
+```
+
+### Actors
+Currently, the following actors have been implemented: 
+  * BaseActor: A random actor. 
+  * PendulumDNNActor: A pendulum based actor, that updates based on a standard mutation only genetic algorithm. The fitness function is purely defined on expected reward. 
+
 ## Literature
 Relevant ideas from RL literature 
 
