@@ -80,10 +80,9 @@ class PendulumDNNActor(BaseActor):
         return a[0]
 
     def split_mutate(self, w1, w2):
-        random.randint(0, w1
-        neurons = [len(w[i] for i in range(1, len(w1)-1, 2)]
+        neurons = [len(w[i]) for i in range(1, len(w1)-1, 2)]
         split = random.randint(0, sum(neurons))
-        split_mask_flat = np.array([i > split for in range(sum(neurons))])
+        split_mask_flat = np.array([i > split for i in range(sum(neurons))])
         
         options = [w1, w2]
         random.shuffle(options)
