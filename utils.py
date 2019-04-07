@@ -3,7 +3,7 @@ from typing import Type, Dict
 
 from actor import (
     BaseActor,
-    PendulumDNNActor
+    MutationContinousActor
 )
 from errors import (
     ActorException, 
@@ -13,7 +13,7 @@ from errors import (
  
 ACTOR_MAPPING = {
     "BaseActor" : (["Pendulum-v0"], BaseActor), 
-    "PendulumDNNActor" : (["Pendulum-v0"], PendulumDNNActor), 
+    "MutationContinousActor" : (["Pendulum-v0"], MutationContinousActor), 
 }
 
 

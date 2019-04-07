@@ -11,13 +11,13 @@ python -m initialiser \
   --generations=200 \
   --episodes=10 \
   --duration=20 \
-  --actor-type="PendulumDNNActor" \
+  --actor-type="PMutationContinousActor" \
 ```
 
 ### Actors
 Currently, the following actors have been implemented: 
   * BaseActor: A random actor. 
-  * PendulumDNNActor: A pendulum based actor, that updates based on a standard mutation only genetic algorithm. The fitness function is purely defined on expected reward. 
+  * MutationContinousActor: An actor that operates in a continous action and environment space. Actor improvements are based on a standard mutation only genetic algorithm. The fitness function is purely defined on expected reward. 
 
 ## Literature
 Relevant ideas from RL literature 

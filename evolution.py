@@ -1,7 +1,9 @@
 import gym
 
-from actor import PendulumDNNActor
+from actor import MutationContinousActor
+
 import utils
+import tensorflow as tf
 
 
 def run_episode(env, actor, episode_steps: int, show=True):
@@ -18,12 +20,13 @@ def run_episode(env, actor, episode_steps: int, show=True):
     """
     rewards = []
     observation = env.reset()
-    for t in range(episode_steps):
+    with tf.Session(graph=actor.graph) as sess:
+     for t in range(episode_steps):
         if show:
             env.render()
     
         # Get action from actor, given observation
-        action = actor.choose_action(env, observation) #)env.action_space.sample()
+        action = actor.choose_action(env, observation, session=sess)
 
         # get reward and new environment state from env
         observation, reward, done, info = env.step(action)
@@ -86,10 +89,12 @@ def run_experiment(actor_fn, env_fn, num_actors, no_generation, no_episode, ep_d
         :return: 
     """
     
-    actors = [actor_fn() for i in range(num_actors)]
+    actors = [actor_fn(env_fn()) for i in range(num_actors)]
 
     env = env_fn()
     env.reset()
+    actors = [actor_fn(env) for i in range(num_actors)]
+
 
     for g in range(no_generation):
         actor_rewards = []
@@ -110,17 +115,4 @@ def run_experiment(actor_fn, env_fn, num_actors, no_generation, no_episode, ep_d
         
     env.reset()
     return get_best_actors(actors, actor_rewards)
-
-def main(args):
-    writer = tf.summary.FileWriter(args.logdir)
-
-    actor_fn = lambda: PendulumDNNActor()
-    env_fn = lambda: gym.make("Pendulum-v0")
-    actors = 5
-    generations = 100
-    episodes = 5
-    ep_duration = 10
-
-    winner = run_experiment(actor_fn, env_fn, actors, generations, episodes, ep_duration, writer=writer)
-    
 

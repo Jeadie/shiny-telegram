@@ -1,16 +1,16 @@
 import random
 
 import numpy as np
-from keras.models import Sequential
-from keras.layers import Dense
+import tensorflow as tf
 
 
 class BaseActor(object):
 
-    def __init__(self):
+    def __init__(self, env):
         self.name = "Base Actor"
+        self.env = env
 
-    def choose_action(self, env, observation):
+    def choose_action(self, observation, session=None):
         """ Selects an action to apply to the environment given the
             observation of the previous state.
 
@@ -20,11 +20,12 @@ class BaseActor(object):
         :return: An action to choose from the given environment.
         
         """
-        action = env.action_space.sample()
+        action = self.env.action_space.sample()
         return action
 
-    def get_reward(self, observation, reward, done, info):
-        """ Returns the reward received from the previous action.
+    def get_reward(self, observation, reward, done, info, session=None):
+        """Updates the actor based on the reward received, given the previous
+           action/state space.
 
         :param observation: The observed state of the environment.
         :param reward: The reward from the previous action.
@@ -43,30 +44,41 @@ class BaseActor(object):
         return BaseActor()
 
 
-class PendulumDNNActor(BaseActor):
+class MutationContinousActor(BaseActor):
 
-    def __init__(self, model=None):
+    OUTPUT_LAYER_NAME = "cts_action_value"
+    CHILD_e = 0.005
+
+    def __init__(self, env, graph=None, model=None):
+        self.env = env
         self.name = "Pendulum DNN Actor"
-        self.e = 0.00005        
+        self.graph=graph 
         if model:
             self.model = model
         else:
             self.model = self.create_model()
 
     def create_model(self): 
-        """ Creates a Keras Deep Neural Network model. Takes a vector of
-            length 3 as input and outputs a scalar on the domain [-2,2]. 
+        """ Creates a DNN mapping state to continous actions. Maps 
 
         :return: A constructed keras model.
         """
-        model = Sequential()
-        model.add(Dense(8, input_dim=3, activation='relu'))
-        model.add(Dense(4, activation='relu'))
-        model.add(Dense(1, activation='sigmoid'))
-        return model
+        if not self.graph: 
+          self.graph = tf.Graph()
+        with self.graph.as_default():
+          self.state = tf.placeholder(tf.float32, shape=(1, self.env.observation_space.shape[0]))
+          x = tf.layers.dense(self.state, 8, activation=tf.nn.relu)
+          x = tf.layers.dense(x, 4, activation=tf.nn.relu)
+          x = tf.layers.dense(x, self.env.action_space.shape[0], activation=tf.nn.sigmoid)
+          
+          # Convert to continous_action_space_domain. 
+          # TODO: checks for dim > 1 outputs 
+          a,b = self.env.action_space.low, self.env.action_space.high       
+          model = float(b-a) * x + float(a)
+        return tf.identity(model, name="output")
 
 
-    def choose_action(self, env, observation):
+    def choose_action(self, env, observation, session=None):
         """ Selects an action to apply to the environment given the
             observation of the previous state.
 
@@ -76,64 +88,13 @@ class PendulumDNNActor(BaseActor):
         :return: An action to choose from the given environment.
         
         """
-        a = self.model.predict(np.array([observation]))
-        return a[0]
+        if session: 
+          return session.run(self.model, feed_dict={self.state: np.reshape(observation, [1, -1])})[0]
 
-    def split_mutate(self, w1, w2):
-        neurons = [len(w[i]) for i in range(1, len(w1)-1, 2)]
-        split = random.randint(0, sum(neurons))
-        split_mask_flat = np.array([i > split for i in range(sum(neurons))])
-        
-        options = [w1, w2]
-        random.shuffle(options)
-        split_mask = np.cumsum(a) # list of len of 
-
-    
-    def random_mutate(self, w1, w2):
-        """ Mutates the weights of two, same shaped, model weights. 
-
-        """
-        options = [w1, w2]
-        random_w = lambda: options[random.random() > 0.5]
-        weights = []
-
-        # Input weights have no bias
-        input_w = []
-        for j in range(len(w1[0])):
-            w = random_w()
-            input_w.append(w[0][j][:]+ self.e*np.random.rand(w[0].shape[-1])) 
-        weights.append(input_w)
-
-        # Do middle layers
-        # To randomise neurons, keep bias and weights together
-        for i in range(1, len(w1)-1, 2):
-            weight = []
-            bias = []
-
-            # Go through each neuron
-            for j in range(w1[i].shape[0]):
-                w = random_w()
-                weight.append(w[i+1][j][:]) 
-                bias.append(w[i][j])
-            
-            # Add noise to weights and biases
-            weight = weight + self.e*np.random.rand(len(weight), weight[0].shape[0])
-            bias = bias + self.e*np.random.rand(len(bias))
-            weights.extend([bias, weight])
-
-        # add final output bias
-        weights.append(random_w()[-1] + self.e*np.random.rand(1))
-        return weights
-
-
-    def mutate_weights(self, w1, w2): 
-        w = random.choice([w1, w2])
-        m = []
-        for i in range(len(w)):
-          layer = w[i].shape
-          m.append(w[i] + np.random.random(w[i].shape) * self.e)
-
-        return m
+        else: 
+          with tf.Session(graph=self.graph) as sess:
+            return session.run(self.model, feed_dict={self.state: observation})[0]
+ 
 
     def mutate(self, other):
         """ Returns an offspring that is a mutation between self and an other actor.
@@ -142,15 +103,35 @@ class PendulumDNNActor(BaseActor):
         :return: A separate, new actor. 
 
         """
-        config = self.model.get_config()
+        actor = random.choice([self, other])    
+        new_graph = deep_copy_graph(actor.graph)
+        with tf.Session(graph=new_graph) as sess:
+          sess.run(tf.global_variables_initializer())
+          graph = tf.get_default_graph()
+          for t_var in tf.trainable_variables():
+            add_random_noise(t_var, stddev=MutationContinousActor.CHILD_e)
+        
+        model = new_graph.get_tensor_by_name(MutationContinousActor.OUTPUT_LAYER_NAME)
+        return MutationContinousActor(self.env.unwrapped.spec.id, model=model, graph=new_graph)
 
-        weights = self.model.get_weights()
-        other_weights = other.model.get_weights()
-        new_weights = self.mutate_weights(weights, other_weights)
 
-        model = Sequential.from_config(config)
-        model.set_weights(new_weights)
+### Utilities ###
 
-        return PendulumDNNActor(model=model)
+#################
 
 
+def deep_copy_graph(g): 
+    new_g = tf.Graph()
+    tf.contrib.graph_editor.copy(g, new_g)
+    return new_g
+
+
+def add_random_noise(w, mean=0.0, stddev=1.0):
+    variables_shape = tf.shape(w)
+    noise = tf.random_normal(
+        variables_shape,
+        mean=mean,
+        stddev=stddev,
+        dtype=tf.float32,
+    )
+    return tf.assign_add(w, noise)

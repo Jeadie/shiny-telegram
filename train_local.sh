@@ -8,5 +8,5 @@ python -m initialiser \
        	--generations=200 \
        	--episodes=6 \
        	--duration=8 \
-       	--actor-type="PendulumDNNActor" \
+       	--actor-type="MutationContinousActor" \
 
